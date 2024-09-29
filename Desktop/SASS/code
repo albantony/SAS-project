@@ -1,0 +1,850 @@
+ /*INTRODUCTION : PRÉPARATION DE LA BASE DE TRAVAIL */
+ /*Importation de la base de données dans la work*/
+ /*Transformation du fichier csv en fichier sas*/
+ PROC IMPORT DATAFILE = 'W:\Bureau\SAS\ESS6\ESS6e02_5.csv'
+ OUT = work.ess6
+ DBMS = CSV replace;
+ GUESSINGROWS=max;
+ RUN;
+ /*Sauvegarde hors de la librairie de travail*/
+ LIBNAME don "W:\Bureau\SAS\ESS6";
+ DATA don.ess06;
+ SET ess6;
+ RUN;
+ /*Copie de la table dans la WORK*/
+ DATA ess6;
+ SET don.ess06;
+ RUN;
+ 27
+/*On filtre les données qui concernent la France dans une base que l'on appelle
+ ESS6_FR*/
+ DATA ESS6_FR;
+ SET ess6;
+ WHERE cntry = "FR";
+ RUN;
+ /*On filtre à présent en conservant les variables qui nous intéressent */
+ DATA ESS6_FR;
+ SET ESS6_FR;
+ KEEP cntry gndr edctn edulvlb edlvdfr edlvpdfr mainact edlvfdfr edlvmdfr
+ emprm14 occm14b emprf14 occf14b wrkctra mnactic uemp5yr stfjbot marsts pspwght isco08
+ pweight eduyrs;
+ RENAME cntry = pays
+ gndr = genre
+ edctn = education
+ edulvlb = niveau_max_education
+ edlvdfr = niveau_max_education_france
+ edlvpdfr = niveau_max_education_conjoint
+ mainact = principale_activite
+ edlvfdfr = niveau_max_education_pere
+ edlvmdfr = niveau_max_education_mere
+ emprm14 = statut_mere
+ occm14b = emploi_mere
+ emprf14 = statut_pere
+ occf14b = emploi_pere
+ wrkctra = contrat_travail
+ mnactic = principale_activite_postcode
+ uemp5yr = chomage_recherche_emploi
+ stfjbot = satisfaction_equilibre
+ isco08 = metier
+ marsts = statut_mariage;
+ RUN;
+ /*I. I. L’éducation des filles en France */
+ /* A. Un niveau d’éducation élevé qui reflète la volonté de démocratisation de
+ l’enseignement des autorités publiques */
+ /* 1. Niveau d’éducation des filles par rapport aux garçons et comparaison du
+ niveau à l’école */
+ /* On crée un graphique qui représente le niveau d'éducation des filles puis des
+ garçons */
+ /* on définit d'abord la variable niveau d'étude de la personne interrogée */
+ 28
+/*création d'une table avec uniquement les filles*/
+ DATA ESS6_FR_filles;
+ SET ESS6_FR;
+ WHERE genre = 2;
+ RUN;
+ /*On trie le niveau d'études en fonction des filles */
+ DATA ESS6_FR_filles;
+ SET ESS6_FR_filles;
+ IF niveau_max_education_france >=1 and niveau_max_education_france <7 THEN
+ niveau_etudes = "a-Faible niveau d'études";
+ ELSE IF niveau_max_education_france >=7 and niveau_max_education_france <= 11
+ THEN niveau_etudes = "b- Niveau d'études correct";
+ ELSE IF niveau_max_education_france >=12 and niveau_max_education_france <=18
+ THEN niveau_etudes = "c-Bon niveau d'études";
+ ELSE IF niveau_max_education_france >=19 and niveau_max_education_france <= 26
+ THEN niveau_etudes = "d-Très bon niveau d'études";
+ RUN;
+ /*Figure 1.1 : niveau d'études des filles en France en 2012*/
+ TITLE "Niveau d'études des filles en France";
+ PROC SGPLOT DATA = ESS6_FR_filles;
+ HBAR niveau_etudes/ Datalabel stat = percent;
+ yaxis label = "Niveau d'études";
+ xaxis label = "Pourcentage";
+ RUN;QUIT;
+ /*Création d'une table avec uniquement les garçons*/
+ DATA ESS6_FR_garcons;
+ SET ESS6_FR;
+ WHERE genre = 1;
+ RUN;
+ /*On trie le niveau d'études en fonction des garçons */
+ DATA ESS6_FR_garcons;
+ SET ESS6_FR_garcons;
+ IF niveau_max_education_france >=1 and niveau_max_education_france <7 THEN
+ niveau_etudes = "a-Faible niveau d'études";
+ 29
+ELSE IF niveau_max_education_france >=7 and niveau_max_education_france <= 11
+ THEN niveau_etudes = "b- Niveau d'études correct";
+ ELSE IF niveau_max_education_france >=12 and niveau_max_education_france <=18
+ THEN niveau_etudes = "c-Bon niveau d'études";
+ ELSE IF niveau_max_education_france >=19 and niveau_max_education_france <= 26
+ THEN niveau_etudes = "d-Très bon niveau d'études";
+ RUN;
+ /*Figure 1.2 : niveau d'études des garçons en France en 2012*/
+ TITLE "Niveau d'études des garçons en France";
+ PROC SGPLOT DATA = ESS6_FR_garcons;
+ HBAR niveau_etudes/ Datalabel stat = percent;
+ yaxis label = "Niveau d'études";
+ xaxis label = "Pourcentage";
+ RUN;QUIT;
+ /*I.A.2. La durée des études */
+ /*Création d'un coefficient de pondération*/
+ DATA ESS6_FR_filles;
+ SET ESS6_FR_filles;
+ pond=pspwght*pweight*1000;
+ RUN;
+ /*Création d'un diagramme qui montre la répartition du nombre d'années d'étude des
+ filles puis des garçons en France en 2012*/
+ /*Figure 1.3 :*/
+ proc univariate data=ESS6_FR_filles;
+ var eduyrs;
+ where eduyrs <88;
+ weight pond;
+ run;
+ /*Figure 1.5 :*/
+ Title "Répartition du nombre d'années d'études des filles en France en 2012";
+ proc univariate data = ESS6_FR_filles;
+ var eduyrs;
+ where eduyrs <88;
+ histogram / midpoints=0 to 26 kernel(C=1);
+ run;
+ 30
+DATA ESS6_FR_garcons;
+ SET ESS6_FR_garcons;
+ pond=pspwght*pweight*1000;
+ RUN;
+ /*Figure 1.4. :*/
+ proc univariate data=ESS6_FR_garcons;
+ var eduyrs;
+ where eduyrs <88;
+ weight pond;
+ run;
+ data ESS6_FR_garcons;
+ set ESS_FR_garcons;
+ /*Figure 1.6 :*/
+ Title "Répartition du nombre d'années d'études des garçons en France en 2012";
+ proc univariate data = ESS6_FR_garcons;
+ var eduyrs;
+ where eduyrs <88;
+ histogram / midpoints=0 to 26 kernel(C=1);
+ run;
+ /* B. Vers quelles filières les filles s'orientent-elles ? */
+ /* Création de la variable profession qui désigne les ingénieurs et les métiers de
+ l'éducation */
+ DATA ESS6_FR;
+ SET ESS6_FR;
+ IF metier>=2300 and metier<2351 THEN profession="Métier de l'éducation";
+ ELSE IF metier>=2140 and metier<2154 THEN profession="Ingénieur";
+ RUN;
+ /*Création d'un coefficient de pondération*/
+ DATA ESS6_FR;
+ SET ESS6_FR;
+ pond=pspwght*pweight*1000;
+ RUN;
+ 31
+DATA ESS6_FR;
+ SET ESS6_FR;
+ IF genre = 2 THEN sexe = "Femme";
+ IF genre = 1 THEN sexe = "Homme";
+ RUN;
+ /* Figure 1.7. : Création d'un graphique comparant la part d'hommes et de femmes dans
+ les métiers d'ingénieurs et de l'éducation */
+ TITLE "Part des hommes et des femmes dans les métiers d'ingénieur(e) et de
+ l'éducation";
+ proc sgplot data=ESS6_FR pctlevel= group noborder;
+ FOOTNOTE1 JUSTIFY = LEFT "Source = European Social Survey (2012)";
+ VBAR profession / freq = pond stat=percent group= sexe
+ groupdisplay=clusterseglabel
+ SEGLABELATTRS=(size=8) datalabel dataskin=matte filltype=gradient
+ datalabel baselineattrs=(thickness=0);
+ xaxis label = "Métier";
+ yaxis label = "Pourcentage d'individus";
+ xaxis display = (noline nolabel noticks);
+ yaxis display=(noline) grid;
+ styleattrs datacolors = (ORANGE PINK);
+ RUN; QUIT;
+ /* C. Quelle place pour la France dans l'Union Européenne ? */
+ /*On crée un code dans un nouveau programme pour ne pas garder que les données
+ concernant la France : */
+ proc import datafile = "/home/u63712129/sas/ESS6e02_6.csv"
+ out = ess
+ dbms = csv
+ replace;
+ getnames = yes;
+ datarow=2;
+ guessingrows = 54673;
+ run;
+ DATA ess_europe;
+ SET ess;
+ KEEP cntry gndr edctn edulvlb edlvdfr edlvpdfr mainact edlvfdfr edlvmdfr
+ emprm14 occm14b emprf14 occf14b wrkctra mnactic uemp5yr stfjbot marsts pspwght isco08
+ pweight eduyrs;
+ rename cntry = pays
+ gndr = genre
+ 32
+edctn = education
+ edulvlb = niveau_max_etudes
+ edlvdfr = niveau_max_etudes_france
+ eduyrs = nombre_annees_etudes
+ mainact = activite_principale
+ edlvfdfr = niveau_etudes_pere
+ edlvmdfr = niveau_etudes_mere
+ emprm14 = satut_emploi_mere_14
+ occm14b = emploi_mere_14
+ emprf14 = satut_emploi_pere_14
+ occf14b = emploi_pere_14
+ wrkctra = CDI_CDD
+ mnactic = activite_7_jours
+ uemp5yr = chomage
+ stfjbot = balance_pro_perso
+ marsts = etat_matrimonial
+ isco08 = metier;
+ RUN;
+ /*Créons des catégories d'années d'études*/
+ data ess_europe;
+ set ess_europe;
+ if nombre_annees_etudes <10 then categorie_nb_etudes = "a-Moins de 10 ans d'études";
+ else if nombre_annees_etudes >9 and nombre_annees_etudes <15 then categorie_nb_etudes
+ = "b-Entre 10 et 14 ans d'études";
+ else if nombre_annees_etudes >14 and nombre_annees_etudes <19 then categorie_nb_etudes
+ = "c-Entre 15 et 18 ans d'études";
+ else if nombre_annees_etudes >18 then categorie_nb_etudes = "d-Plus de 18 ans
+ d'études";
+ Run;
+ DATA ess_europe;
+ SET ess_europe;
+ pond=pspwght*pweight*1000;
+ RUN;
+ /*Distribution du nombre d'années d'étude*/
+ title "Répartition du nombre d'années d'études en Europe";
+ proc univariate data=ess_europe;
+ var nombre_annees_etudes;
+ where nombre_annees_etudes <30;
+ histogram / midpoints=0 to 26 kernel(C=1); run;
+ title "Répartition du nombre d'années d'études des filles en Europe";
+ proc univariate data = ess_europe;
+ var nombre_annees_etudes;
+ 33
+where genre = 2 And nombre_annees_etudes <30;
+ histogram / midpoints=0 to 26 kernel(C=1);
+ run;
+ PROC GCHART DATA = ess_europe;
+ HBAR nombre_annees_etudes / FREQ = pond;
+ where genre = 2;
+ RUN; QUIT;
+ /*Chapitre 2 : L’influence du cadre familial sur le niveau d’étude et l’orientation
+ scolaire des filles */
+ /*II) A. L’influence du niveau d’éducation des parents sur l’éducation des filles
+ /* Création de la variable niveau_etudes qui évalue le niveau scolaire de la personne
+ sondée à travers 4 catégories, transformation d'une donnée chiffrée en une chaîne de
+ caractères */*/
+ DATA ESS6_FR;
+ SET ESS6_FR;
+ IF niveau_max_education_france >= 1 and niveau_max_education_france < 7 THEN
+ niveau_etudes = "Faible niveau d'études";
+ ELSE IF niveau_max_education_france >= 7 and niveau_max_education_france <= 11
+ THEN niveau_etudes = "Niveau d'études correct";
+ ELSE IF niveau_max_education_france >= 12 and niveau_max_education_france <= 18
+ THEN niveau_etudes = "Bon niveau d'études";
+ ELSE IF niveau_max_education_france >= 19 and niveau_max_education_france <= 26
+ THEN niveau_etudes = "Très bon niveau d'études";
+ RUN;
+ /*Niveau d'études du père de la personne sondée selon cette même méthode*/
+ DATA ESS6_FR;
+ SET ESS6_FR;
+ IF niveau_max_education_pere >=1 and niveau_max_education_pere <7 THEN
+ niveau_etudes_pere = "Faible niveau d'études";
+ ELSE IF niveau_max_education_pere >=7 and niveau_max_education_pere <= 11 THEN
+ niveau_etudes_pere = "Niveau d'études correct";
+ ELSE IF niveau_max_education_pere >=12 and niveau_max_education_pere <=18 THEN
+ niveau_etudes_pere = "Bon niveau d'études";
+ ELSE IF niveau_max_education_pere >=19 and niveau_max_education_pere <= 26 THEN
+ niveau_etudes_pere = "Très bon niveau d'études";
+ RUN;
+ /*Niveau d'études de la mère de la personne sondée*/
+ DATA ESS6_FR;
+ SET ESS6_FR;
+ IF niveau_max_education_mere >=1 and niveau_max_education_mere <7 THEN
+ niveau_etudes_mere = "Faible niveau d'études";
+ 34
+ELSE IF niveau_max_education_mere >=7 and niveau_max_education_mere <= 11 THEN
+ niveau_etudes_mere = "Niveau d'études correct";
+ ELSE IF niveau_max_education_mere >=12 and niveau_max_education_mere <=18 THEN
+ niveau_etudes_mere = "Bon niveau d'études";
+ ELSE IF niveau_max_education_mere >=19 and niveau_max_education_mere <= 26 THEN
+ niveau_etudes_mere = "Très bon niveau d'études";
+ RUN;
+ /*Création de la variable pondération*/
+ DATA ESS6_FR;
+ SET ESS6_FR;
+ pond=pspwght*pweight*10000;
+ RUN;
+ /*Graphique montrant le niveau d'études de l'enfant en fonction de celui de son père
+ */
+ TITLE "Niveau d'études de l'enfant en fonction de celui de son père";
+ PROC SGPLOT DATA=ESS6_FR PCTLEVEL=group NOBORDER;
+ STYLEATTRS datacolors = (lightblue beige violet);
+ LABEL niveau_etudes_pere ="Niveau d'études du père";
+ LABEL niveau_etudes="Niveau d'études";
+ VBAR niveau_etudes / group = niveau_etudes_pere freq=pond stat=percent
+ seglabel;
+ XAXIS LABEL = "Niveau d'études";
+ YAXIS LABEL = "Pourcentage d'individus";
+ RUN;
+ /*Graphique du niveau d'études de l'enfant en fonction de celui de sa mère */
+ title "Niveau d'études de l'enfant en fonction de celui de sa mère";
+ PROC SGPLOT data=ESS6_FR pctlevel=group noborder;
+ styleattrs datacolors = (lightblue beige violet);
+ label niveau_etudes_mere ="Niveau d'études de la mère";
+ label niveau_etudes="Niveau d'études";
+ VBAR niveau_etudes / group = niveau_etudes_mere freq=pond stat=percent seglabel;
+ xaxis label = "Niveau d'études";
+ yaxis label = "Pourcentage d'individus";
+ RUN;
+ /*création d'une table avec uniquement les filles*/
+ DATA ESS6_FR_filles;
+ SET ESS6_FR;
+ WHERE genre = 2;
+ RUN;
+ /*Graphique du niveau d'études des filles en fonction de celui de leur père*/
+ TITLE "Niveau d'études des filles en fonction de celui de leur père";
+ PROC SGPLOT DATA=ESS6_FR_filles PCTLEVEL=group NOBORDER;
+ STYLEATTRS datacolors = (lightblue beige violet);
+ LABEL niveau_etudes_pere ="Niveau d'études du père";
+ LABEL niveau_etudes="Niveau d'études";
+ VBAR niveau_etudes / group = niveau_etudes_pere freq=pond stat=percent
+ seglabel;
+ XAXIS LABEL = "Niveau d'études";
+ YAXIS LABEL = "Pourcentage d'individus";
+ RUN;
+ 35
+/*Graphique du niveau d'études des filles en fonction de celui de leur mère*/
+ TITLE "Niveau d'études des filles en fonction de celui de leur mère";
+ PROC SGPLOT data=ESS6_FR_filles pctlevel=group noborder;
+ STYLEATTRS datacolors = (lightblue beige violet);
+ LABEL niveau_etudes_mere ="Niveau d'études de la mère";
+ LABELniveau_etudes="Niveau d'études";
+ VBAR niveau_etudes / group = niveau_etudes_mere freq=pond stat=percent seglabel;
+ XAXIS LABEL = "Niveau d'études";
+ YAXIS LABEL = "Pourcentage d'individus";
+ RUN;
+ /* Comparaison de la force de corrélation entre le niveau d'études du père et celui de
+ sa fille et le niveau d'études de la mère et celui de sa fille*/
+ /* On sort donc un tableau de corrélation sous la forme de matrice de Pearson*/
+ PROC CORR DATA=ESS6_FR_filles (WHERE = (niveau_max_education_france<27 and
+ niveau_max_education_pere<27 and niveau_max_education_mere < 27)) PEARSON;
+ VAR niveau_max_education_france niveau_max_education_pere
+ niveau_max_education_mere;
+ WEIGHT pond;
+ RUN;
+ /* recodage de la variable afin de comparer le niveau d'éducation des filles et celui
+ de leur mère*/
+ /*création de la variable compar_etude pour les filles et leur mère*/
+ DATA ESS6_FR_filles;
+ SET ESS6_FR_filles;
+ IF niveau_etudes > niveau_etudes_mere THEN compar_etude_mere = " Meilleures
+ études";
+ ELSE IF niveau_etudes = niveau_etudes_mere THEN compar_etude_mere = "études
+ équivalentes";
+ ELSE IF niveau_etudes < niveau_etudes_mere THEN compar_etude_mere = "Moins
+ bonnes études";
+ RUN;
+ /*Tracé du pie chart */
+ TITLE "Niveau d'étude des filles en fonction de celui de la mère ";
+ PROC GCHART DATA = ESS6_FR_filles;
+ PIE compar_etude_mere / PERCENT = ARROW NOHEADING;
+ RUN;
+ QUIT;
+ /*II) B) L’influence de la profession des parents sur l’éducation des filles*/
+ /*Création d'un format pour trier les différents métiers du questionnaire en fonction
+ de la nomenclature des PCS*/
+ PROC FORMAT ;
+ VALUE PCS
+ 1="Professions intermédiaires"
+ 2="Cadres"
+ 3="Employés qualifiés"
+ 4-5="Employés semi-qualifiés"
+ 36
+6="Employés qualifiés"
+ 7="Employés semi-qualifiés"
+ 8="Employés non qualifiés"
+ 9="agriculteurs"
+ 10="autres";
+ RUN;
+ /*Création d'un second format pour garder les données chiffrés de la variable
+ niveau_max_etudes et ses dérivées ce qui va nous aider lors du tracé du graphique*/
+ PROC FORMAT;
+ VALUE etudes
+ 1-6 = "Faible niveau d'études"
+ 7-11="Niveau d'études correct"
+ 12-18="Bon niveau d'études"
+ 19-26="Très bon niveau d'études";
+ RUN;
+ /*Création d'une nouvelle variable alternative à niveau_etudes pour rassembler les
+ bons et très bons niveau d'études ce qui facilite la comparaison dans ce cas précis*/
+ DATA ESS6_FR_filles;
+ SET ESS6_FR_filles;
+ IF niveau_max_education_france >= 1 and niveau_max_education_france < 7 THEN
+ niveau_etudes2 = "Faible niveau d'études";
+ ELSE IF niveau_max_education_france >= 7 and niveau_max_education_france <= 11
+ THEN niveau_etudes2 = "Niveau d'études correct";
+ ELSE IF niveau_max_education_france >= 12 and niveau_max_education_france <= 26
+ THEN niveau_etudes2 = "Bon voire très bon niveau d'études";
+ RUN;
+ /*Création d'un graphique donnant le niveau d'études des filles en fonction de la
+ profession de la mère*/
+ PROC SGPLOT data=ESS6_FR_filles (WHERE =(emploi_mere<11)) pctlevel=group noborder;
+ TITLE "Niveau d'études de la fille en fonction de la profession de la mère";
+ label emploi_mere ="Profession de la mère";
+ label niveau_etudes2 ="Niveau d'études de la fille";
+ VBAR niveau_etudes2 / group = emploi_mere freq=pond stat=percent seglabel;
+ FORMAT emploi_mere PCS.;
+ xaxis label = "Niveau d'études";
+ yaxis label = "Pourcentage d'individus";
+ RUN;
+ /*Création d'un second graphique donnant le niveau d'études des filles en fonction de
+ la profession du père*/
+ PROC SGPLOT data=ESS6_FR_filles (WHERE =(emploi_pere<11)) pctlevel=group noborder;
+ TITLE "Niveau d'études de la fille en fonction de la profession du père";
+ LABEL emploi_pere ="Profession du père";
+ LABEL niveau_etudes2 ="Niveau d'études de la fille";
+ VBAR niveau_etudes / group = emploi_pere freq=pond stat=percent seglabel;
+ FORMAT emploi_pere PCS.;
+ XAXIS LABEL = "Niveau d'études";
+ YAXIS LABEL = "Pourcentage d'individus";
+ RUN;
+ /* II) C. La relation entre le choix du conjoint et l’éducation des filles*/
+ 37
+/*création de deux nouvelles variables chiffrées afin de pouvoir comparer le niveau
+ d'éducation de la femme et de son conjoint*/
+ /*création de la variable compar*/
+ DATA ESS6_FR_filles (WHERE = (niveau_max_education_france<27));
+ SET ESS6_FR_filles;
+ IF 1<=niveau_max_education_france<=6 THEN compar_chiffre_fille=1;
+ ELSE IF 7=<niveau_max_education_france =<11 THEN compar_chiffre_fille=2;
+ ELSE IF 12=<niveau_max_education_france =<18 THEN compar_chiffre_fille=3;
+ ELSE IF 19=<niveau_max_education_france =<26 THEN compar_chiffre_fille=4;
+ RUN;
+ /*création d'une nouvelle variable afin de pouvoir comparer le niveau d'éducation de
+ la femme et de son conjoint*/
+ DATA ESS6_FR_filles (WHERE = (niveau_max_education_conjoint<27));
+ SET ESS6_FR_filles;
+ IF 1<=niveau_max_education_conjoint<=6 THEN compar_chiffre_conjoint=1;
+ ELSE IF 7=<niveau_max_education_conjoint =<11 THEN compar_chiffre_conjoint=2;
+ ELSE IF 12=<niveau_max_education_conjoint =<18 THEN compar_chiffre_conjoint=3;
+ ELSE IF 19=<niveau_max_education_conjoint =<26 THEN compar_chiffre_conjoint=4;
+ RUN;
+ /*création de la variable comparative qui va nous servir à créer le graphique*/
+ DATA ESS6_FR_filles;
+ SET ESS6_FR_filles;
+ IF compar_chiffre_fille > compar_chiffre_conjoint THEN compar_etude_conjoint =
+ " Meilleures études";
+ ELSE IF compar_chiffre_fille = compar_chiffre_conjoint THEN
+ compar_etude_conjoint = "études équivalentes";
+ ELSE IF compar_chiffre_fille < compar_chiffre_conjoint THEN
+ compar_etude_conjoint = "Moins bonnes études";
+ RUN;
+ /*Tracé du pie chart en 3D*/
+ TITLE "Niveau d’éducation des femmes par rapport à leur conjoint";
+ PROC GCHART DATA =ESS6_FR_filles;
+ PIE3D compar_etude_conjoint / PERCENT = ARROW NOHEADING WOUTLINE=2 COUTLINE=black
+ DISCRETE;
+ RUN;
+ QUIT;
+ /* Chapitre 3 : Des choix d’orientation scolaire qui renforcent les inégalités de
+ genre dans l’accès à l’emploi */
+ /* On recode la variable gndr pour qu'elle soit plus lisible */
+ DATA ESS6_FR;
+ SET ESS6_FR;
+ WHERE gndr NE 9;
+ IF gndr = 1 THEN genre ="Homme";
+ 38
+IF gndr = 2 THEN genre ="Femme";
+ RUN;
+ /*A. Des choix d’orientation scolaire qui renforcent les inégalités hommes-femmes
+ A.1. Des choix différenciés qui conduisent à des métiers genrés */
+ /* Création de la variable profession qui désigne les ingénieurs et les infirmières
+ */
+ DATA ESS6_FR;
+ SET ESS6_FR;
+ IF isco08>=2220 and isco08<2223 THEN profession="Infirmière";
+ ELSE IF isco08>=2140 and isco08<2154 THEN profession="Ingénieur";
+ RUN;
+ /* Création d'un graphique comparant la part d'hommes et de femmes dans les métiers
+ d'ingénieurs et d'infirmière */
+ TITLE "Part des hommes et des femmes dans les métiers d'ingénieur(e) et
+ d'infirmier(e)";
+ proc sgplot data=ESS6_FR pctlevel= group noborder;
+ FOOTNOTE1 JUSTIFY = LEFT "Source = European Social Survey (2012)";
+ VBAR profession / freq = pond stat=percent group= genre
+ groupdisplay=clusterseglabel
+ SEGLABELATTRS=(size=8) datalabel dataskin=matte filltype=gradient
+ datalabel baselineattrs=(thickness=0);
+ xaxis label = "Métier";
+ yaxis label = "Pourcentage d'individus";
+ xaxis display = (noline nolabel noticks);
+ yaxis display=(noline) grid;
+ styleattrs datacolors = (RED GREEN);
+ RUN; QUIT;
+ /* Création d'une boite à moustache qui rend compte des différences de salaire entre
+ infirmière et ingénieur */
+ TITLE "Boite à moustache des déciles de revenu des infirmières et ingénieurs en
+ France";
+ proc sgplot data=ESS6_FR;
+ vbox hinctnta / category = profession;
+ label hinctnta="Décile de revenu";
+ label profession="Infirmière ou ingénieur";
+ WHERE hinctnta >= 1 AND hinctnta <= 9;
+ RUN;
+ /* A.2. Des disparités salariales entre hommes et femmes */
+ 39
+/* Création d'une boite à moustache qui rend compte des différences de salaire entre
+ hommes et femmes */
+ TITLE "Boite à moustache des déciles de revenu des hommes et femmes en France";
+ proc sgplot data=ESS6_FR;
+ vbox hinctnta / category = genre;
+ label hinctnta="Décile de revenu";
+ label grenre="Hommes ou femmes";
+ WHERE hinctnta >= 1 AND hinctnta <= 9;
+ RUN;
+ /* Création de la variable revenu qui désigne les premiers et les derniers déciles
+ de revenus */
+ DATA ESS6_FR;
+ SET ESS6_FR;
+ IF hinctnta=1 THEN revenu="Premier décile";
+ ELSE IF hinctnta=9 THEN revenu="Dernier décile";
+ RUN;
+ /* Création d'un graphique comparant la part d'hommes et de femmes dans les déciles
+ de revenu */
+ TITLE "Part des hommes et des femmes dans les premier et dernier déciles de
+ revenus";
+ proc sgplot data=ESS6_FR pctlevel= group noborder;
+ FOOTNOTE1 JUSTIFY = LEFT "Source = European Social Survey (2012)";
+ VBAR revenu / freq = pond stat=percent group= genre
+ groupdisplay=clusterseglabel
+ SEGLABELATTRS=(size=8) datalabel dataskin=matte filltype=gradient
+ datalabel baselineattrs=(thickness=0);
+ xaxis label = "Déciles de revenus";
+ yaxis label = "Pourcentage d'individus";
+ xaxis display = (noline nolabel noticks);
+ yaxis display=(noline) grid;
+ styleattrs datacolors = (RED GREEN);
+ RUN; QUIT;
+ /* On veut maintenant déterminer la part d'hommes et de femmes ayant un haut niveau
+ d'éducation dans les premiers et derniers déciles de revenu */
+ /* Part d'hommes et de femmes ayant un haut niveau d'éducation*/
+ TITLE "Part des hommes et femmes parmi les personnes ayant un haut niveau
+ d'éducation";
+ PROC FREQ DATA =ESS6_FR;
+ TABLES genre;
+ 40
+WHERE edlvdfr >= 19 AND edlvdfr <= 26; /* On considère dans haut niveau d'éducation
+ : Diplôme d'école d'ingénieur, DESS, Master deuxième année professionnelMaîtrise,
+ CAPES, CRPE (professeur des écoles),DEA, DES, Master deuxième année recherche,
+ Agrégation,Diplômes professionnels supérieurs divers(notaire, architecte,
+ vétérinaire, journaliste…), Diplôme des grandes écoles (hors écoles
+ d'ingénieur),Doctorat en médecine ou équivalents (Médecine,Dentaire, Pharmacie,
+ Vétérinaire), Doctorat
+ */
+ RUN;
+ /* Part d'hommes et de femmes ayant un haut niveau d'éducationdans le premier décile
+ de revenu */
+ TITLE "Part d'hommes et de femmes ayant un haut niveau d'éducation dans le premier
+ décile de revenu";
+ PROC FREQ DATA =ESS6_FR;
+ TABLES genre;
+ WHERE edlvdfr >= 19 AND edlvdfr <= 26;
+ WHERE hinctnta =1;
+ WEIGHT pond;
+ RUN;
+ /* Part d'hommes et de femmes ayant un haut niveau d'éducationdans le dernier décile
+ de revenu */
+ TITLE "Part d'hommes et de femmes ayant un haut niveau d'éducation dans le dernier
+ décile de revenu";
+ PROC FREQ DATA =ESS6_FR;
+ TABLES genre;
+ WHERE edlvdfr >= 19 AND edlvdfr <= 26;
+ WHERE hinctnta =9;
+ WEIGHT pond;
+ RUN;
+ /* B. Un accès à l’emploi différenciés selon le genre
+ B.1. Des difficultés à s’insérer sur le marché du travail */
+ /* Part d'hommes et de femmes en CDD */
+ TITLE "Part d'hommes et de femmes ayant un contrat de travail à durée déterminée ";
+ PROC FREQ DATA =ESS6_FR;
+ TABLES genre;
+ WHERE wrkctra =2;
+ WEIGHT pond;
+ RUN;
+ /* Création de la variable contrat qui désigne les CDD */
+ DATA ESS6_FR;
+ 41
+SET ESS6_FR;
+ IF wrkctra=2 THEN contrat="CDD";
+ RUN;
+ /* Création d'un graphique comparant la part d'hommes et de femmes en CDD */
+ TITLE "Part d'hommes et de femmes ayant un contrat de travail à durée déterminée ";
+ proc sgplot data=ESS6_FR pctlevel= group noborder;
+ FOOTNOTE1 JUSTIFY = LEFT "Source = European Social Survey (2012)";
+ VBAR contrat / freq = pond stat=percent group= genre
+ groupdisplay=clusterseglabel
+ SEGLABELATTRS=(size=8) datalabel dataskin=matte filltype=gradient
+ datalabel baselineattrs=(thickness=0);
+ xaxis label = "Type de contrat";
+ yaxis label = "Pourcentage d'individus";
+ xaxis display = (noline nolabel noticks);
+ yaxis display=(noline) grid;
+ styleattrs datacolors = (RED GREEN);
+ RUN; QUIT;
+ /* B. Un accès à l’emploi différenciés selon le genre
+ B.2) Les femmes ont un niveau d’étude supérieur à celui requis pour leur travail */
+ /* Création de la variable metier qui désigne differents métiers exercés par des
+ femmes */
+ DATA ESS6_FR;
+ SET ESS6_FR;
+ IF isco08>=2640 and isco08=<2659 and gndr=2 THEN metierF="art du spectacle";
+ ELSE IF isco08>=2300 and isco08=<2351 and gndr=2 THEN metierF="Professeure";
+ ELSE IF isco08>=3340 and isco08=<3344 and gndr=2 THEN metierF="Secrétaire";
+ RUN;
+ /*Créons des catégories d'années d'études*/
+ DATA ESS6_FR;
+ SET ESS6_FR;
+ if edulvlb = 313 or edulvlb = 323 or edulvlb = 321 then niveau_etudes ="a-Niveau
+ d'études correct";
+ else if edulvlb = 413 or edulvlb = 421 or edulvlb = 510 then niveau_etudes ="b-Bon
+ niveau d'études";
+ else if edulvlb = 520 or edulvlb = 620 or edulvlb = 710 then niveau_etudes ="c-Très
+ bon niveau d'études";
+ RUN;
+ /*Niveau d'étude des femmes par rapport au travail */
+ 42
+proc sgplot data=ESS6_FR pctlevel= group noborder;
+ vbar metierF / stat = percent group = niveau_etudes seglabel ;
+ where cntry="FR";
+ styleattrs datacolors = (LIGHTRED LIGHTGREEN LIGHTBLUE YELLOW );
+ footnote1 justify =left"Source : European Social Survey (2012)";
+ footnote2 justify =left"Champ : Population française";
+ footnote3 justify =left"Lecture : 25% des femmes exerçant un metier dans le domaine
+ des arts du spectacle ont un très bon niveau d'étude." ;
+ title "Niveau d'étude des femmes selon la profession";
+ xaxis label ="Metier";
+ yaxis label = "Niveau d'études (en %)";
+ run;
+ /* Création de la variable metier qui désigne differents métiers exercés par des
+ hommes */
+ DATA ESS6_FR;
+ SET ESS6_FR;
+ IF isco08>=2640 and isco08=<2659 and gndr=1 THEN metierH="art du spectacle";
+ ELSE IF isco08>=2300 and isco08=<2351 and gndr=1 THEN metierH="Professeur";
+ ELSE IF isco08>=3340 and isco08=<3344 and gndr=1 THEN metierH="Secrétaire";
+ RUN;
+ /* Création d'un graphique qui metier "Niveau d'étude des hommes selon la
+ profession" */
+ proc sgplot data=ESS6_FR pctlevel= group noborder;
+ vbar metierH / stat = percent group = niveau_etudes seglabel ;
+ where cntry="FR";
+ styleattrs datacolors = (LIGHTRED LIGHTGREEN LIGHTBLUE YELLOW );
+ footnote1 justify =left"Source : European Social Survey (2012)";
+ footnote2 justify =left"Champ : Population française";
+ footnote3 justify =left"Lecture : 22.2% des hommes exerçant un metier dans le
+ domaine des arts du spectacle ont un très bon niveau d'étude." ;
+ title "Niveau d'étude des hommes selon la profession";
+ xaxis label ="Metier";
+ yaxis label = "Niveau d'études (en %)";
+ run;
+ /*Transition : même si les femmes sont plus diplômées qu eles hommes, elles sont
+ beaucoup plus à la maison*/
+ /* Création de la variable activite qui désigne differentes situations des individus
+ */
+ DATA ESS6_FR;
+ SET ESS6_FR;
+ IF mainact=1 THEN activite="travail salarié";
+ ELSE IF mainact=3 THEN activite="chômage recherche de travail";
+ ELSE IF mainact=4 THEN activite="sans emploi inactif";
+ ELSE IF mainact=8 THEN activite="à la maison";
+ 43
+RUN;
+ /* Création d'un graphique qui montre la répartition hommes femmes des différentes
+ activités" */
+ PROC GCHART DATA = ESS6_FR ;
+ DONUT genre / SUBGROUP = activite FREQ = pond CLOCKWISE PERCENT = inside
+ NOHEADING ;
+ TITLE "Répartition hommes femmes des différentes activités" ;
+ FOOTNOTE1 JUSTIFY = LEFT "Source = European Social Survey (2012)";
+ FOOTNOTE2 JUSTIFY = LEFT "Champ = Population française" ;
+ FOOTNOTE3 JUSTIFY = LEFT "Lecture = Travail salarié (1)- Chômage recherche de travail (2)- Sans emploi inactif (3)- A la maison (4)" ;
+ RUN ;
+ /*On cherche la part de femme au foyer qui ont un bon niveau d'étude */
+ /* Créons des catégories d'années d'études restreintes aux femmes */
+ DATA ESS6_FR;
+ SET ESS6_FR;
+ if edulvlb = 313 or edulvlb = 323 or edulvlb = 321 and gndr=2 then niveau_etudes_F
+ ="a-Niveau d'études correct";
+ else if edulvlb = 413 or edulvlb = 421 or edulvlb = 510 and gndr=2 then
+ niveau_etudes_F ="b-Bon niveau d'études";
+ else if edulvlb = 520 or edulvlb = 620 or edulvlb = 710 and gndr=2 then
+ niveau_etudes_F ="c-Très bon niveau d'études";
+ else if edulvlb =113 or edulvlb =213 then niveau_etudes_F = "Faible niveau
+ d'études";
+ RUN;
+ /* Création de la variable ffoyer pour les femmes au foyer */
+ DATA ESS6_FR;
+ SET ESS6_FR;
+ IF mainact=8 and gndr=2 THEN ffoyer="femme au foyer";
+ ELSE IF mainact>= 1 and mainact <=7 and gndr = 2 THEN ffoyer="pas femme au foyer";
+ RUN;
+ /*Graphique qui montre le niveau d'étude des femmes au foyer*/
+ title "Niveau d'étude des femmes au foyer";
+ proc sgplot data=ESS6_FR PCTLEVEL = group NOBORDER;
+ where cntry="FR";
+ label niveau_etudes="Niveau d'étude";
+ label niveau_etudes="Niveau d'étude";
+ VBAR niveau_etudes_F / group = ffoyer freq=pond STAT = percent
+ DATALABEL ;
+ YAXIS LABEL = "Pourcentage d'individus" ;
+ XAXIS DISPLAY = (noline nolabel noticks) ;
+ 44
+FOOTNOTE1 JUSTIFY = LEFT "Source = European Social Survey (2012)";
+ FOOTNOTE2 JUSTIFY = LEFT "Champ = Population française" ;
+ FOOTNOTE3 JUSTIFY = LEFT "Lecture = 30% des femmes au foyer ont un très bon niveau
+ d'étude" ;
+ RUN;
+ /* C. Evaluation de la satisfaction des femmes en fonction de leur niveau d'étude
+ et d'éducation */
+ /* Création de la variable satisfaction_vie */
+ DATA ESS6_FR;
+ SET ESS6_FR;
+ IF stflife=0 THEN satisfaction_vie="extrêmement peu satisfait de sa vie";
+ ELSE IF stflife>=1 and stflife<=3 THEN satisfaction_vie="très peu satisfait de sa
+ vie";
+ ELSE IF stflife>=4 and stflife<=5 THEN satisfaction_vie=" peu satisfait de sa vie";
+ ELSE IF stflife>=6 and stflife<=7 THEN satisfaction_vie="satisfait de sa vie";
+ ELSE IF stflife>=8 and stflife<=9 THEN satisfaction_vie="très satisfait de sa vie";
+ ELSE IF stflife=10 THEN satisfaction_vie="extrêmement satisfait de sa vie";
+ RUN;
+ /* Création d'un graphique qui évalue la satisfaction des femmes en fonction de leur
+ niveau d'étude */
+ title "Satisfaction des femmes en fonction de leur niveau d'étude";
+ proc sgplot data=ESS6_FR pctlevel= group noborder;
+ FOOTNOTE1 JUSTIFY = LEFT "Source = European Social Survey (2012)";
+ VBAR satisfaction_vie / freq = pond stat=percent group= niveau_etudes_F
+ groupdisplay=clusterseglabel
+ SEGLABELATTRS=(size=8) datalabel dataskin=matte filltype=gradient
+ datalabel baselineattrs=(thickness=0);
+ xaxis label = "satisfaction de sa vie";
+ yaxis label = "Pourcentage d'individus";
+ xaxis display = (noline nolabel noticks);
+ yaxis display=(noline) grid;
+ styleattrs datacolors = (LIGHTRED LIGHTGREEN LIGHTBLUE YELLOW );
+ RUN; QUIT;
+ /* Création de la variable satisfaction_balance */
+ DATA ESS6_FR;
+ SET ESS6_FR;
+ IF stfjbot=0 THEN satisfaction_balance="extrêmement peu satisfait";
+ ELSE IF stfjbot>=1 and stfjbot<=3 THEN satisfaction_balance="très peu satisfait";
+ ELSE IF stfjbot>=4 and stfjbot<=5 THEN satisfaction_balance=" peu satisfait";
+ ELSE IF stfjbot>=6 and stfjbot<=7 THEN satisfaction_balance="satisfait";
+ 45
+ELSE IF stfjbot>=8 and stfjbot<=9 THEN satisfaction_balance="très satisfait";
+ ELSE IF stfjbot=10 THEN satisfaction_balance="extrêmement satisfait";
+ RUN;
+ /* Création d'un graphique qui évalue la satisfaction des femmes de la balance entre
+ job et vie en fonction de leur niveau d'étude */
+ title "Satisfaction de l'équilibre entre le travail et le reste de sa vie chez les
+ femmes en fonction de leur niveau d'étude";
+ proc sgplot data=ESS6_FR pctlevel= group noborder;
+ FOOTNOTE1 JUSTIFY = LEFT "Source = European Social Survey (2012)";
+ VBAR satisfaction_balance / freq = pond stat=percent group= niveau_etudes_F
+ groupdisplay=clusterseglabel
+ SEGLABELATTRS=(size=8) datalabel dataskin=matte filltype=gradient
+ datalabel baselineattrs=(thickness=0);
+ xaxis label = "satisfaction de l'équilibre entre son travail et le reste de sa vie
+ ";
+ yaxis label = "Pourcentage d'individus";
+ xaxis display = (noline nolabel noticks);
+ yaxis display=(noline) grid;
+ styleattrs datacolors = (LIGHTRED LIGHTGREEN LIGHTBLUE YELLOW );
+ RUN; QUIT;
+ /* ANNEXES */
+ /*Création de la variable activite2 qui désigne les ingénieurs, les femmes au foyer
+ et les infirmières */
+ DATA ESS6_FR;
+ SET ESS6_FR;
+ IF isco08>=2220 and isco08<2223 and gndr=2 THEN activite2="Infirmière";
+ ELSE IF isco08>=2140 and isco08<2154 and gndr=2 THEN activite2="Ingénieure";
+ ELSE IF mainact=8 and gndr=2 THEN activite2="femme au foyer";
+ RUN;
+ /* Création d'un graphique qui évalue la satisfaction de la vie des ingénieurs, les
+ femmes au foyer et les infirmières */
+ title "Satisfaction de la vie des ingénieurs, les femmes au foyer et les
+ infirmières";
+ proc sgplot data=ESS6_FR pctlevel= group noborder;
+ FOOTNOTE1 JUSTIFY = LEFT "Source = European Social Survey (2012)";
+ VBAR satisfaction_vie / freq = pond stat=percent group= activite2
+ groupdisplay=clusterseglabel
+ SEGLABELATTRS=(size=8) datalabel dataskin=matte filltype=gradient
+ datalabel baselineattrs=(thickness=0);
+ xaxis label = "satisfaction de sa vie ";
+ 46
+yaxis label = "Pourcentage d'individus";
+ xaxis display = (noline nolabel noticks);
+ yaxis display=(noline) grid;
+ styleattrs datacolors = (LIGHTRED LIGHTGREEN LIGHTBLUE YELLOW );
+ RUN; QUIT;
+ /* Création d'un graphique qui évalue la satisfaction des femmes ingénieurs, les
+ femmes au foyer et les infirmières de la balance entre job et vie */
+ TITLE "Satisfaction de l'équilibre entre le travail et le reste de sa vie chez les
+ femmes";
+ proc sgplot data=ESS6_FR pctlevel= group noborder;
+ FOOTNOTE1 JUSTIFY = LEFT "Source = European Social Survey (2012)";
+ VBAR satisfaction_balance / freq = pond stat=percent group= activite2
+ groupdisplay=clusterseglabel
+ SEGLABELATTRS=(size=8) datalabel dataskin=matte filltype=gradient
+ datalabel baselineattrs=(thickness=0);
+ xaxis label = "satisfaction de l'équilibre entre son travail et le reste de sa vie
+ ";
+ yaxis label = "Pourcentage d'individus";
+ xaxis display = (noline nolabel noticks);
+ yaxis display=(noline) grid;
+ styleattrs datacolors = (LIGHTRED LIGHTGREEN LIGHTBLUE YELLOW );
+ RUN; QUIT;
+ /* B. Un accès à l’emploi différenciés selon le genre
+ B.2. Des choix d’orientation scolaire qui conduisent à des périodes de chômage plus
+ rudes (ANNEXE) */
+ /* Part d'hommes et de femmes ayant vécu une période de chômage de plus de 3 mois */
+ TITLE "Part d'hommes et de femmes ayant vécu une période de chômage de plus de 3
+ mois ";
+ PROC FREQ DATA =ESS6_FR;
+ TABLES genre;
+ WHERE uemp3m =1;
+ WEIGHT pond;
+ RUN;
+ /* Part d'hommes et de femmes ayant vécu une période de chômage ou de recherche
+ d'emploi au cours des cinq dernières années */
+ TITLE "Part d'hommes et de femmes ayant vécu une période de chômage ou de recherche
+ d'emploi au cours des cinq dernières années ";
+ PROC FREQ DATA =ESS6_FR;
+ TABLES genre;
+ WHERE uemp5yr =1;
+ WEIGHT pond;
+ 47
+RUN;
